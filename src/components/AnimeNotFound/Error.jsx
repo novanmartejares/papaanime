@@ -8,7 +8,7 @@ export default function Error() {
       className="gogoanime-error d-flex-fd-column a-center j-center"
     >
       <img src={error} alt="error"></img>
-      <h2>Sorry, we couldn't find the anime you requested.</h2>
+      <h2>Sorry, we couldn&apos;t find the anime you requested.</h2>
     </div>
   );
 }

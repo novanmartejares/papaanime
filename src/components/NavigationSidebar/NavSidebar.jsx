@@ -25,7 +25,7 @@ export default function NavSidebar(props) {
           <div
             className="d-flex a-center j-center close-menu"
             style={{ width: "60%" }}
-            onClick={() => props.setSidebarIsOpen()}
+            onClick={() => props.setSidebarIsOpen(false)}
           >
             <FaChevronLeft size={12} />
             Close Menu

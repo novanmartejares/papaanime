@@ -12,6 +12,8 @@ export default function LazyImage({
   const imgRef = useRef(null);
   const [imgSrc, setImgSrc] = useState();
   useEffect(() => {
+    const node = imgRef.current;
+    if (!node) return;
     const options = {
       threshold: 0,
       root: null,
@@ -20,11 +22,11 @@ export default function LazyImage({
     const observer = new IntersectionObserver((entries) => {
       if (entries[0].isIntersecting) setImgSrc(src);
     }, options);
-    if (imgRef.current) observer.observe(imgRef.current);
+    observer.observe(node);
     return () => {
-      if (imgRef.current) observer.unobserve(imgRef.current);
+      observer.unobserve(node);
     };
-  }, [imgRef]);
+  }, [src]);
   return (
     <motion.img
       className={className}

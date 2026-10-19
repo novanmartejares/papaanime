@@ -12,7 +12,7 @@ export default function Details() {
   const { data, isLoading } = getAnimeByMalId(params.id);
   const animeObj = data?.data;
   const [descIsCollapsed, setDescIsCollapsed] = useState(true);
-  const genre = animeObj?.genres.map((genre) => {
+  const genre = animeObj?.genres?.map((genre) => {
     return (
       <Link
         className="genre-button"
@@ -71,26 +71,27 @@ export default function Details() {
       animate={{ x: [window.innerWidth, 0], opacity: 1 }}
       transition={{ duration: 0.7, ease: easeOut }}
     >
-      {!isLoading ? (
+      {!isLoading && animeObj ? (
         <div className="details-header">
           <div className="details-header-primary">
             <img
               className="details-container-background"
               src={
-                animeObj.images.webp.image_url ||
-                animeObj.images.webp.large_image_url ||
-                animeObj.images.webp.large_small_url ||
-                animeObj.images.jpg.large_image_url ||
+                animeObj.images?.webp?.image_url ||
+                animeObj.images?.webp?.large_image_url ||
+                animeObj.images?.webp?.large_small_url ||
+                animeObj.images?.jpg?.large_image_url ||
                 "NA"
               }
+              alt="background"
             />
             <div className="anime-details d-flex">
               <LazyImage
                 className="anime-details-poster"
                 src={
-                  animeObj.images.webp.image_url ||
-                  animeObj.images.webp.large_image_url ||
-                  animeObj.images.webp.large_small_url ||
+                  animeObj.images?.webp?.image_url ||
+                  animeObj.images?.webp?.large_image_url ||
+                  animeObj.images?.webp?.large_small_url ||
                   "NA"
                 }
                 isAnimated={false}
@@ -123,9 +124,9 @@ export default function Details() {
                 </div>
                 <div className="button-wrapper">
                   <Link
-                    to={`/watch?name=${
-                      animeObj.title_english || animeObj.title
-                    }`}
+                    to={`/watch?name=${encodeURIComponent(
+                      animeObj.title_english || animeObj.title || ""
+                    )}&id=${animeObj.id || animeObj.mal_id || ""}`}
                     className="btn-primary hero-button"
                     onClick={() => window.scrollTo({ top: 0 })}
                   >
@@ -156,23 +157,23 @@ export default function Details() {
           <div className="details-header-secondary">
             <div className="details-header-statistics">
               <p>
-                <b>Japanese:</b> {animeObj.title_japanese}
+                <b>Japanese:</b> {animeObj.title_japanese || "N/A"}
               </p>
               <p>
-                <b>Synonyms:</b> {synonyms.length > 0 ? synonyms : "N/A"}
+                <b>Synonyms:</b> {synonyms && synonyms.length > 0 ? synonyms : "N/A"}
               </p>
               <p>
                 <b>Aired:</b>
-                {animeObj.aired.string || "?"}
+                {animeObj.aired?.string || "?"}
               </p>
               <p>
                 <b>Duration:</b> {animeObj.duration || "NA"}
               </p>
               <p>
-                <b>Score:</b> {animeObj.score}
+                <b>Score:</b> {animeObj.score || "N/A"}
               </p>
               <p>
-                <b>Status:</b> {animeObj.status}
+                <b>Status:</b> {animeObj.status || "N/A"}
               </p>
               <p>
                 <b>Premiered:</b> {animeObj.season || "Season: ?" + " "}

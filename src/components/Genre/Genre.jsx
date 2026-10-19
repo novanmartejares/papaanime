@@ -12,7 +12,7 @@ export default function Genre() {
   const genre = getGenre();
   const list = isCollapsed ? genre.data?.data.slice(0, 18) : genre.data?.data;
 
-  const genreList = list?.map((el, idx) => {
+  const genreList = list?.map((el, _idx) => {
     return (
       <Link
         key={el.mal_id}

@@ -56,41 +56,44 @@ export default function Details() {
     <span key={title}>{title},</span>
   ));
 
-  return !isLoading ? (
+  return !isLoading && animeObj ? (
     <div className="details-container">
       <div className="details-header">
         <div className="details-header-primary">
-          <lazy
+          <img
             className="details-container-background"
             src={
-              animeObj.images.webp.image_url ||
-              animeObj.images.webp.large_image_url ||
-              animeObj.images.webp.large_small_url ||
-              animeObj.images.jpg.large_image_url ||
+              animeObj.images?.webp?.image_url ||
+              animeObj.images?.webp?.large_image_url ||
+              animeObj.images?.webp?.large_small_url ||
+              animeObj.images?.jpg?.large_image_url ||
               "NA"
             }
-            isAnimated={false}
+            alt="background"
           />
           <div className="anime-details d-flex">
             <LazyImage
               className="anime-details-poster"
               src={
-                animeObj.images.webp.image_url ||
-                animeObj.images.webp.large_image_url ||
-                animeObj.images.webp.large_small_url
+                animeObj.images?.webp?.image_url ||
+                animeObj.images?.webp?.large_image_url ||
+                animeObj.images?.webp?.large_small_url ||
+                "NA"
               }
               isAnimated={false}
             />
 
             <div className="anime-details-content d-flex-fd-column">
               <h1 className="title-large">
-                {animeObj.title || animeObj.title_english}
+                {animeObj.title_english || animeObj.title || "Anime Details"}
               </h1>
               <div className="anime-statistics-tiles-wrapper d-flex a-center">
                 <span className="anime-statistics-tile d-flex a-center j-center">
-                  {window.innerWidth < 450
-                    ? animeObj.rating.slice(0, 6)
-                    : animeObj.rating || "NA"}
+                  {animeObj.rating
+                    ? window.innerWidth < 450
+                      ? animeObj.rating.slice(0, 6)
+                      : animeObj.rating
+                    : "NA"}
                 </span>
                 <span className="anime-statistics-tile d-flex a-center j-center">
                   <FaMedal /> - {animeObj.rank || "NA"}
@@ -99,7 +102,7 @@ export default function Details() {
                   <FaHeart /> -{animeObj.favorites || "NA"}
                 </span>
                 <span className="anime-statistics-tile d-flex a-center j-center">
-                  <FaEye /> -{animeObj.members | "NA"}
+                  <FaEye /> -{animeObj.members || "NA"}
                 </span>
                 <span className="anime-statistics-tile d-flex a-center j-center">
                   HD
@@ -107,8 +110,11 @@ export default function Details() {
               </div>
               <div className="button-wrapper">
                 <Link
-                  to={`/watch?name=${animeObj.title || animeObj.title_english}`}
+                  to={`/watch?name=${encodeURIComponent(
+                    animeObj.title_english || animeObj.title || ""
+                  )}&id=${animeObj.id || animeObj.mal_id || ""}`}
                   className="btn-primary hero-button"
+                  onClick={() => window.scrollTo({ top: 0 })}
                 >
                   <FaPlayCircle size={12} /> Watch Now
                 </Link>

@@ -2,13 +2,10 @@ import React from "react";
 import "./content-list.css";
 import { FaChevronRight, FaStar } from "react-icons/fa";
 import { Link } from "react-router-dom";
-import { useInView } from "framer-motion";
 import LazyImage from "../../utils/LazyImage";
 export default function CategorieContainer(props) {
-  
   const ref = React.useRef(null);
-  const isInView = useInView(ref, { once: true });
-  const list = props.data.data?.data.map((el, idx) => {
+  const list = props.data.data?.data?.map((el, _idx) => {
     return (
       <li key={el.mal_id} className="d-flex a-center">
         <LazyImage

@@ -104,13 +104,29 @@ export default function HlsVideoPlayer({ url, type }) {
 
   if (isEmbed) {
     return (
-      <div style={{ width: "100%", height: "100%", overflow: "hidden", borderRadius: "12px", background: "#000" }}>
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          position: "relative",
+          overflow: "hidden",
+          borderRadius: "12px",
+          background: "#000",
+        }}
+      >
         <iframe
+          key={url}
           src={url}
-          style={{ width: "100%", height: "100%", border: "none" }}
+          title="Anime Player"
+          style={{
+            width: "100%",
+            height: "100%",
+            border: "none",
+            display: "block",
+          }}
           allowFullScreen
           scrolling="no"
-          allow="autoplay; encrypted-media; picture-in-picture"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
         />
       </div>
     );

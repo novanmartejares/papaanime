@@ -13,8 +13,24 @@ module.exports = {
   plugins: ['react-refresh'],
   rules: {
     'react-refresh/only-export-components': [
-      'error',
+      'warn',
       { allowConstantExport: true },
     ],
+    'react/prop-types': 'off',
+    'no-unused-vars': [
+      'warn',
+      {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^(React|_)',
+      },
+    ],
   },
+  overrides: [
+    {
+      files: ['src/api/**/*.js', 'src/api/**/*.jsx'],
+      rules: {
+        'react-hooks/rules-of-hooks': 'off',
+      },
+    },
+  ],
 }

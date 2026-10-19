@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { getAnimeByMalId } from "../../api/jikan";
-import { FaStar, FaPlayCircle, FaChevronRight } from "react-icons/fa";
+import { FaStar } from "react-icons/fa";
 import LoadingSpinner from "../LoadingSpinner";
 import { Link } from "react-router-dom";
 import { FaEye, FaHeart, FaMedal } from "react-icons/fa";

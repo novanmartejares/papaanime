@@ -19,7 +19,7 @@ export default function Details() {
       animate={{ x: [window.innerWidth, 100, 0], opacity: 1 }}
       transition={{ duration: 0.7, ease: easeOut }}
     >
-      {isLoading ? (
+      {isLoading || !data?.attributes ? (
         <LoadingSpinner />
       ) : (
         <div className="details-header">
@@ -27,43 +27,43 @@ export default function Details() {
             <LazyImage
               className="details-container-background"
               src={
-                data.attributes.coverImage?.small ||
-                data.attributes.coverImage?.original ||
-                data.attributes.coverImage?.large ||
-                data.attributes.posterImage?.small ||
-                data.attributes.posterImage?.original ||
-                data.attributes.posterImage?.large
+                data.attributes?.coverImage?.small ||
+                data.attributes?.coverImage?.original ||
+                data.attributes?.coverImage?.large ||
+                data.attributes?.posterImage?.small ||
+                data.attributes?.posterImage?.original ||
+                data.attributes?.posterImage?.large
               }
             />
             <div className="anime-details d-flex">
               <img
                 className="anime-details-poster"
                 src={
-                  data.attributes.posterImage?.small ||
-                  data.attributes.posterImage?.original ||
-                  data.attributes.posterImage?.large ||
-                  data.attributes.coverImage?.small ||
-                  data.attributes.coverImage?.original ||
-                  data.attributes.coverImage?.large
+                  data.attributes?.posterImage?.small ||
+                  data.attributes?.posterImage?.original ||
+                  data.attributes?.posterImage?.large ||
+                  data.attributes?.coverImage?.small ||
+                  data.attributes?.coverImage?.original ||
+                  data.attributes?.coverImage?.large
                 }
               />
 
               <div className="anime-details-content d-flex-fd-column">
                 <h1 className="title-large">
-                  {data.attributes.titles.en || data.attributes.titles.en_jp}
+                  {data.attributes?.titles?.en || data.attributes?.titles?.en_jp || "Anime Details"}
                 </h1>
                 <div className="anime-statistics-tiles-wrapper d-flex a-center">
                   <span className="anime-statistics-tile d-flex a-center j-center">
-                    {data.attributes.ageRating || "NA"}
+                    {data.attributes?.ageRating || "NA"}
                   </span>
                   <span className="anime-statistics-tile d-flex a-center j-center">
-                    <FaMedal /> - {data.attributes.popularityRank}
+                    <FaMedal /> - {data.attributes?.popularityRank || "NA"}
                   </span>
                   <span className="anime-statistics-tile d-flex a-center j-center">
-                    <FaHeart /> -{data.attributes.favoritesCount || "NA"}
+                    <FaHeart /> -{data.attributes?.favoritesCount || "NA"}
                   </span>
                   <span className="anime-statistics-tile d-flex a-center j-center">
-                    <FaEye /> -{data.attributes.userCount || "NA"}
+                    <FaEye /> -{data.attributes?.userCount || "NA"}
                   </span>
                   <span className="anime-statistics-tile d-flex a-center j-center">
                     HD
@@ -71,11 +71,12 @@ export default function Details() {
                 </div>
                 <div className="button-wrapper">
                   <Link
-                    to={`/watch?name=${
-                      data.attributes.titles.en ||
-                      data.attributes.canonicalTitle ||
-                      data.attributes.titles.en_jp
-                    }`}
+                    to={`/watch?name=${encodeURIComponent(
+                      data.attributes?.titles?.en ||
+                        data.attributes?.canonicalTitle ||
+                        data.attributes?.titles?.en_jp ||
+                        ""
+                    )}`}
                     className="btn-primary hero-button"
                     onClick={() => window.scrollTo({ top: 0 })}
                   >
@@ -87,8 +88,8 @@ export default function Details() {
                 </div>
                 <p>
                   {descIsCollapsed
-                    ? data.attributes.description?.slice(0, 350) + "..."
-                    : data.attributes.description}
+                    ? data.attributes?.description?.slice(0, 350) + "..."
+                    : data.attributes?.description}
                   <span
                     style={{ cursor: "pointer" }}
                     onClick={() => setDescIsCollapsed((prev) => !prev)}

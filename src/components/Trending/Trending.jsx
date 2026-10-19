@@ -19,7 +19,7 @@ export default function Trending() {
 
     return (
       <SwiperSlide key={item.titles.en_jp} className="trending-slide">
-        <div
+        <motion.div
           initial={{ opacity: 0 }}
           animate={isInView ? { x: [100, 10, 0], opacity: 1 } : undefined}
           transition={{
@@ -61,7 +61,7 @@ export default function Trending() {
               isAnimated={true}
             />
           </Link>
-        </div>
+        </motion.div>
       </SwiperSlide>
     );
   });

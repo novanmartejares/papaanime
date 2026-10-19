@@ -1,151 +1,251 @@
-import axios from "axios";
+/* eslint-disable react-refresh/only-export-components */
 import { useQuery } from "react-query";
+import { fetchAniList, mapAniListMediaToJikan } from "../api/anilist";
 
-const BASE_URL = `https://miruro-api-eta.vercel.app`;
+const PROVIDERS = ["megaplay", "vidhawk", "nontongo", "twoembed"];
 
 export function useSearch(name) {
-  const { data, isLoading, isError } = useQuery(["search", name], async () => {
-    if (!name) return null;
-    const res = await axios.get(`${BASE_URL}/search?query=${name}`);
-    return res.data;
-  });
+  const { data, isLoading, isError } = useQuery(
+    ["search-anime", name],
+    async () => {
+      if (!name || name.trim() === "") return null;
 
-  if (!name) return { isLoading: true };
+      const query = `
+        query($search: String) {
+          Page(page: 1, perPage: 10) {
+            media(search: $search, type: ANIME, sort: SEARCH_MATCH) {
+              id
+              idMal
+              title { romaji english native }
+              coverImage { extraLarge large medium }
+              bannerImage
+              episodes
+              duration
+              averageScore
+              format
+              genres
+              description
+              status
+            }
+          }
+        }
+      `;
 
-  const results = data?.results;
-  if (results && results.length === 0) {
+      try {
+        const res = await fetchAniList(query, { search: name.trim() });
+        return res?.Page?.media || [];
+      } catch (err) {
+        console.warn("AniList search error:", err);
+        return [];
+      }
+    },
+    {
+      staleTime: 5 * 60 * 1000,
+      enabled: Boolean(name && name.trim().length > 0),
+    }
+  );
+
+  if (!name || name.trim() === "") {
+    return { isLoading: false, noAnime: false };
+  }
+
+  if (isLoading) {
+    return { isLoading: true };
+  }
+
+  const results = data || [];
+  if (results.length === 0) {
     return { noAnime: true, isLoading: false, isError };
   }
 
-  // Miruro returns one anime for both sub and dub. 
-  // We return it under both keys to maintain compatibility with the old hook shape temporarily, 
-  // though we will update WatchAnime to use just 'anime'.
+  const primary = results[0];
+  const mapped = mapAniListMediaToJikan(primary);
+
   return {
-    anime: results?.[0], 
-    sub: results?.[0], 
-    dub: results?.[0],
-    isLoading,
-    isError,
+    anime: mapped,
+    sub: mapped,
+    dub: mapped,
+    results: results.map(mapAniListMediaToJikan),
+    isLoading: false,
+    isError: false,
+    noAnime: false,
   };
 }
 
 export function useAnimeInfo(id) {
-  const { data: infoData, isLoading: infoLoading, isError: infoError } = useQuery(["info", id], async () => {
-    if (!id) return null;
-    const res = await axios.get(`${BASE_URL}/info/${id}`);
-    return res.data;
+  const { data, isLoading, isError } = useQuery(
+    ["anime-info", id],
+    async () => {
+      if (!id) return null;
+      const numericId = parseInt(id, 10);
+      if (isNaN(numericId)) return null;
+
+      const query = `
+        query($id: Int) {
+          Media(id: $id, type: ANIME) {
+            id
+            idMal
+            title { romaji english native }
+            coverImage { extraLarge large medium }
+            bannerImage
+            episodes
+            duration
+            averageScore
+            format
+            genres
+            description
+            status
+          }
+        }
+      `;
+
+      try {
+        const res = await fetchAniList(query, { id: numericId });
+        return res?.Media;
+      } catch (err) {
+        console.warn("AniList info fetch error:", err);
+        return null;
+      }
+    },
+    {
+      staleTime: 10 * 60 * 1000,
+      enabled: Boolean(id),
+    }
+  );
+
+  if (!id) return { isLoading: false };
+  if (isLoading) return { isLoading: true };
+  if (isError || !data) return { isLoading: false, isError: true, id };
+
+  const totalEpisodes =
+    data.episodes && data.episodes > 0
+      ? data.episodes
+      : data.format === "MOVIE"
+      ? 1
+      : 24;
+
+  const episodeList = Array.from({ length: totalEpisodes }, (_, i) => ({
+    id: i + 1,
+    number: i + 1,
+    title: `Episode ${i + 1}`,
+  }));
+
+  const providersObj = {};
+  PROVIDERS.forEach((prov) => {
+    providersObj[prov] = {
+      episodes: {
+        sub: episodeList,
+        dub: episodeList,
+      },
+    };
   });
 
-  const { data: epsData, isLoading: epsLoading, isError: epsError } = useQuery(["episodes", id], async () => {
-    if (!id) return null;
-    const res = await axios.get(`${BASE_URL}/episodes/${id}`);
-    return res.data;
-  });
-
-  if (!id) return { isLoading: true };
-  
-  const isLoading = infoLoading || epsLoading;
-  const isError = infoError || epsError;
-
-  if (isLoading || isError || !infoData || !epsData) {
-    return { isLoading: true, isError, id };
-  }
-
-  // Find the first provider that has episodes (e.g. "kiwi", "zoro", etc.)
-  let defaultProvider = "";
-  let providers = epsData.providers || {};
-  let subEpisodes = [];
-  let dubEpisodes = [];
-
-  if (Object.keys(providers).length > 0) {
-    // Just pick the first available provider for simplicity, usually kiwi or zoro
-    defaultProvider = Object.keys(providers)[0];
-    const eps = providers[defaultProvider]?.episodes || {};
-    subEpisodes = eps.sub || [];
-    dubEpisodes = eps.dub || [];
-  }
+  const title =
+    data.title?.english || data.title?.romaji || data.title?.native || "Anime";
+  const image =
+    data.coverImage?.extraLarge ||
+    data.coverImage?.large ||
+    data.coverImage?.medium ||
+    "";
+  const bannerImage = data.bannerImage || image;
+  const description = data.description
+    ? data.description.replace(/<[^>]*>/g, "")
+    : "No description available.";
 
   return {
-    id: infoData.id,
-    title: infoData.title?.english || infoData.title?.romaji || infoData.title?.native,
-    image: infoData.coverImage?.extraLarge || infoData.coverImage?.large,
-    description: infoData.description,
-    episodes: subEpisodes, // default to sub
-    subEpisodes,
-    dubEpisodes,
-    providers: Object.keys(providers),
-    currentProvider: defaultProvider,
-    allEpisodes: epsData.providers,
+    id: data.id,
+    idMal: data.idMal,
+    title,
+    image,
+    bannerImage,
+    description,
+    episodes: episodeList,
+    subEpisodes: episodeList,
+    dubEpisodes: episodeList,
+    providers: PROVIDERS,
+    currentProvider: PROVIDERS[0],
+    allEpisodes: providersObj,
     isLoading: false,
     isError: false,
   };
 }
 
 export function useServers(providersArray) {
-  if (!providersArray) return [];
-  const providerMapping = {
-    kiwi: "ANIMEPAHE (SERVER 1)",
-    bee: "ANIKOTO (SERVER 2)",
-    ally: "ALLMANGA (SERVER 3)",
-    dune: "GOGOANIME (SERVER 4)",
-    ANIMEKAI: "ANIMEKAI (SERVER 5)",
-    SENSHI: "SENSHI (SERVER 6)",
-    ANIMEGG: "ANIMEGG (SERVER 7)",
-    CRUNCHYROLL: "CRUNCHYROLL (SERVER 8)"
-  };
-  const preferredOrder = ["kiwi", "bee", "ally", "dune", "ANIMEKAI", "SENSHI", "ANIMEGG", "CRUNCHYROLL"];
-  const sortedProviders = [...providersArray].sort((a, b) => {
-    const idxA = preferredOrder.indexOf(a);
-    const idxB = preferredOrder.indexOf(b);
-    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-    if (idxA !== -1) return -1;
-    if (idxB !== -1) return 1;
-    return 0;
-  });
-  return sortedProviders.map((p) => ({ id: p, name: providerMapping[p] || p.toUpperCase() }));
-}
-
-export function useEpisodeFiles(episodeId) {
-  const { data, isLoading, isError } = useQuery(["watch", episodeId], async () => {
-    if (!episodeId) return null;
-    const res = await axios.get(`${BASE_URL}/${episodeId}`);
-    return res.data;
-  });
-
-  if (!episodeId) return { isLoading: true };
-
-  if (isLoading || isError || !data) {
-    return { isLoading, isError, sources: [] };
+  if (!providersArray || providersArray.length === 0) {
+    providersArray = PROVIDERS;
   }
 
-  // Support both normal streams and ssub.streams (e.g. dune/gogoanime structure)
-  const rawStreams = data.streams || (data.ssub && data.ssub.streams) || [];
+  const providerMapping = {
+    megaplay: "MEGAPLAY (SERVER 1 - HD)",
+    vidhawk: "VIDHAWK (SERVER 2 - FAST)",
+    nontongo: "NONTONGO (SERVER 3)",
+    twoembed: "2EMBED (SERVER 4 - MULTI)",
+  };
 
-  // Map, filter, and sort streams
-  const sources = rawStreams
-    .filter(stream => stream.url && stream.url.trim() !== "")
-    .map(stream => {
-      const typeLabel = stream.type === "embed" ? "Embed" : "Direct";
-      const qual = stream.quality || "Default";
-      return {
-        quality: `${qual} (${typeLabel})`,
-        url: stream.url,
-        type: stream.type || "hls"
-      };
-    })
-    .sort((a, b) => {
-      // Prioritize Embed (3) over HLS (2) and MP4 (1) for browser CORS compatibility
-      const score = (type) => {
-        if (type === "embed") return 3;
-        if (type === "hls") return 2;
-        if (type === "mp4") return 1;
-        return 0;
-      };
-      return score(b.type) - score(a.type);
-    });
+  return providersArray.map((p) => ({
+    id: p,
+    name: providerMapping[p] || p.toUpperCase(),
+  }));
+}
+
+export function buildStreamUrl(provider, animeId, malId, episodeNumber, isDub) {
+  const ep = episodeNumber || 1;
+  const audio = isDub ? "dub" : "sub";
+  const aniId = animeId || 21;
+
+  switch (provider) {
+    case "vidhawk":
+      return `https://vidhawk.buzz/embed/ani/${aniId}/${ep}/${audio}?server=flow`;
+    case "nontongo":
+      return `https://nontongo.win/anime/${aniId}/${ep}/play`;
+    case "twoembed":
+      return `https://www.2embed.cc/embed/anime/${aniId}/${ep}/${audio}`;
+    case "megaplay":
+    default:
+      return `https://megaplay.buzz/stream/ani/${aniId}/${ep}/${audio}`;
+  }
+}
+
+export function useEpisodeFiles(
+  episodeId,
+  animeId,
+  malId,
+  provider = "megaplay",
+  isDub = false
+) {
+  let epNum = 1;
+  let parsedAnimeId = animeId;
+
+  if (typeof episodeId === "string" && episodeId.includes(":")) {
+    const parts = episodeId.split(":");
+    parsedAnimeId = parts[0] || animeId;
+    epNum = parseInt(parts[1], 10) || 1;
+  } else if (typeof episodeId === "number") {
+    epNum = episodeId;
+  } else if (typeof episodeId === "string") {
+    epNum = parseInt(episodeId, 10) || 1;
+  }
+
+  if (!parsedAnimeId && !episodeId) {
+    return { isLoading: false, isError: false, sources: [] };
+  }
+
+  const streamUrl = buildStreamUrl(
+    provider,
+    parsedAnimeId,
+    malId,
+    epNum,
+    isDub
+  );
 
   return {
-    sources,
+    sources: [
+      {
+        quality: "Auto 1080p (Direct Embed)",
+        url: streamUrl,
+        type: "embed",
+      },
+    ],
     isLoading: false,
     isError: false,
   };

@@ -1,124 +1,336 @@
 import { useQuery } from "react-query";
-import { queueRequest } from "./apiQueue";
+import {
+  fetchAnimeByFilter,
+  fetchAnimeById,
+  fetchAnimeByType,
+  fetchAnimeSearch,
+  fetchGenres,
+  fetchAnimeByGenre as fetchAniListGenre,
+  fetchMostFavorite,
+  fetchMostPopular,
+  fetchRandomAnime,
+  fetchRecommendedAnime,
+  fetchTopAiring,
+  fetchTopCharacters as fetchAniListCharacters,
+  fetchTopUpcoming,
+  fetchAnimeReviews as fetchAniListReviews,
+} from "./anilist";
+
+import {
+  favoriteData,
+  popularData,
+  topAiringData,
+  upcoming,
+} from "../data/featured";
+import {
+  moviesData,
+  onaData,
+  ovaData,
+  specialsData,
+} from "../data/mainSection";
+import { genreData } from "../data/genre";
+import charactersFallback from "../data/characters";
+import { animeReviewsData, mangaReviewsData } from "../data/reviews";
 
 const queryConfig = {
-  staleTime: 2.1 * 60 * 1000,
+  staleTime: 5 * 60 * 1000,
+  refetchOnWindowFocus: false,
+  retry: 1,
 };
 
-function executeQuery(queryKey, endpoint) {
-  return useQuery(
-    queryKey,
+const genreMap = {};
+if (genreData?.data) {
+  genreData.data.forEach((g) => {
+    genreMap[g.mal_id] = g.name;
+    genreMap[String(g.mal_id)] = g.name;
+    genreMap[g.name.toLowerCase()] = g.name;
+  });
+}
+
+function createQueryHook(queryKey, fetcher, fallbackData) {
+  return () => {
+    const { data, isLoading, isError } = useQuery(
+      queryKey,
+      async () => {
+        try {
+          const res = await fetcher();
+          return { data: res };
+        } catch (err) {
+          console.warn(`Live query failed for ${queryKey}, using fallback:`, err);
+          return fallbackData || { data: [] };
+        }
+      },
+      queryConfig
+    );
+
+    const safeData = data || fallbackData || { data: [] };
+    return {
+      data: safeData,
+      isLoading: isLoading && !data,
+      isError: isError && !fallbackData,
+    };
+  };
+}
+
+export const getTopAiring = createQueryHook(
+  "top-airing",
+  () => fetchTopAiring(4),
+  topAiringData
+);
+
+export const getMostPopular = createQueryHook(
+  "most-popular",
+  () => fetchMostPopular(4),
+  popularData
+);
+
+export const getMostFavorite = createQueryHook(
+  "most-favorite",
+  () => fetchMostFavorite(4),
+  favoriteData
+);
+
+export const getTopUpcoming = createQueryHook(
+  "top-upcoming",
+  () => fetchTopUpcoming(4),
+  upcoming
+);
+
+export const getTopMovies = createQueryHook(
+  "top-movies",
+  () => fetchAnimeByType("movie", 12),
+  moviesData
+);
+
+export const getTopOVAs = createQueryHook(
+  "top-OVAs",
+  () => fetchAnimeByType("ova", 12),
+  ovaData
+);
+
+export const getTopONAs = createQueryHook(
+  "top-ONAs",
+  () => fetchAnimeByType("ona", 12),
+  onaData
+);
+
+export const getTopSpecials = createQueryHook(
+  "top-specials",
+  () => fetchAnimeByType("special", 12),
+  specialsData
+);
+
+export const getGenre = createQueryHook(
+  "genre",
+  async () => {
+    const genres = await fetchGenres();
+    return genres;
+  },
+  genreData
+);
+
+export const getTopCharacters = createQueryHook(
+  "top-characters",
+  () => fetchAniListCharacters(5),
+  charactersFallback
+);
+
+export const getAnimeReviews = createQueryHook(
+  "top-anime-reviews",
+  () => fetchAniListReviews(10),
+  animeReviewsData
+);
+
+export const getMangaReviews = createQueryHook(
+  "top-manga-reviews",
+  () => fetchAniListReviews(10),
+  mangaReviewsData
+);
+
+export function getAnimeByMalId(id) {
+  const { data, isLoading, isError } = useQuery(
+    ["anime-by-id", id],
     async () => {
-      return await queueRequest(endpoint);
+      if (!id) return null;
+      try {
+        const item = await fetchAnimeById(id);
+        return { data: item };
+      } catch (err) {
+        console.warn(`Failed to fetch anime by ID ${id}:`, err);
+        // Find in static datasets
+        const allStatic = [
+          ...(topAiringData?.data || []),
+          ...(popularData?.data || []),
+          ...(favoriteData?.data || []),
+          ...(moviesData?.data || []),
+        ];
+        const match = allStatic.find(
+          (a) => String(a.mal_id) === String(id) || String(a.id) === String(id)
+        );
+        return { data: match || null };
+      }
+    },
+    {
+      ...queryConfig,
+      enabled: Boolean(id),
+    }
+  );
+
+  return {
+    data: data,
+    isLoading: isLoading && !data,
+    isError,
+  };
+}
+
+export function getAnimeByGenre(mal_id) {
+  const genreName = genreMap[mal_id] || (typeof mal_id === "string" ? mal_id : "Action");
+
+  const { data, isLoading, isError } = useQuery(
+    ["anime-by-genre", genreName],
+    async () => {
+      try {
+        const list = await fetchAniListGenre(genreName, 24);
+        return { data: list };
+      } catch (err) {
+        console.warn(`Failed to fetch genre ${genreName}:`, err);
+        return popularData || { data: [] };
+      }
     },
     queryConfig
   );
+
+  return {
+    data: data || popularData || { data: [] },
+    isLoading: isLoading && !data,
+    isError,
+  };
 }
 
-export function handleJikanResponse(queryKey, endpoint) {
-  const res = executeQuery(queryKey, endpoint);
-  const data = res.data?.data;
-  return { data: data, isLoading: res.isLoading, isError: res.isError };
-}
-
-export function getMangaReviews() {
-  return handleJikanResponse("top-manga-reviews", "reviews/manga");
-}
-export function getAnimeReviews() {
-  return handleJikanResponse("top-anime-reviews", "reviews/anime");
-}
-
-export function getTopAiring() {
-  return handleJikanResponse("top-airing", "top/anime?filter=airing&limit=4");
-}
-export function getMostPopular() {
-  return handleJikanResponse(
-    "most-popular",
-    "top/anime?filter=bypopularity&limit=4"
-  );
-}
-export function getMostFavorite() {
-  return handleJikanResponse(
-    "most-favorite",
-    "top/anime?filter=favorite&limit=4"
-  );
-}
-export function getTopMovies() {
-  return handleJikanResponse(
-    "top-movies",
-    "top/anime?type=movie&filter=bypopularity&limit=12"
-  );
-}
-export function getTopOVAs() {
-  return handleJikanResponse(
-    "top-OVAs",
-    "top/anime?type=ova&filter=bypopularity&limit=12"
-  );
-}
-export function getTopONAs() {
-  return handleJikanResponse(
-    "top-ONAs",
-    "top/anime?type=ona&filter=bypopularity&limit=12"
-  );
-}
-export function getTopSpecials() {
-  return handleJikanResponse(
-    "top-specials",
-    "top/anime?type=special&filter=bypopularity&limit=12"
-  );
-}
-export function getTopUpcoming() {
-  return handleJikanResponse(
-    "top-upcoming",
-    "top/anime?filter=upcoming&limit=4"
-  );
-}
-export function getGenre() {
-  return handleJikanResponse("genre", "genres/anime");
-}
-export function getTopCharacters() {
-  return handleJikanResponse("top-characters", "top/characters?limit=5");
-}
-export function getAnimeByMalId(id) {
-  return handleJikanResponse(`anime-${id}`, `anime/${id}`);
-}
-export function getAnimeByGenre(mal_id) {
-  return handleJikanResponse(
-    `anime-by-genre-${mal_id}`,
-    `anime?genres=${mal_id}&limit=24`
-  );
-}
 export function getAnimeByFilter(filterName) {
-  return handleJikanResponse(
-    `anime-by-filter-${filterName}`,
-    `top/anime?filter=${filterName}&limit=24`
+  const { data, isLoading, isError } = useQuery(
+    ["anime-by-filter", filterName],
+    async () => {
+      try {
+        const list = await fetchAnimeByFilter(filterName, 24);
+        return { data: list };
+      } catch (err) {
+        console.warn(`Failed to fetch filter ${filterName}:`, err);
+        if (filterName === "airing") return topAiringData;
+        if (filterName === "favorite") return favoriteData;
+        if (filterName === "upcoming") return upcoming;
+        return popularData;
+      }
+    },
+    queryConfig
   );
-}
-export function getAnimeByType(type) {
-  return handleJikanResponse(
-    `anime-by-type-${type}`,
-    `top/anime?type=${type}&limit=24`
-  );
-}
-export function getRecommendedAnime(type) {
-  return handleJikanResponse(
-    `recommended-anime`,
-    `anime?limit=24&status=airing&filter=bypopularity&type=tv&order_by=popularity`
-  );
-}
-export function getRandomAnime() {
-  return handleJikanResponse(`random-anime`, "random/anime");
-}
-export function getAnimeSearch(name, parameter) {
-  let queryString = "";
-  if (parameter === "title") {
-    queryString = `q=${name}`;
-  } else {
-    queryString = `letter=${name}`;
-  }
 
-  return handleJikanResponse(
-    `anime-search${name}`,
-    `anime?${queryString}&sfw=true&order_by=rank&limit=24`
+  return {
+    data: data || popularData || { data: [] },
+    isLoading: isLoading && !data,
+    isError,
+  };
+}
+
+export function getAnimeByType(type) {
+  const { data, isLoading, isError } = useQuery(
+    ["anime-by-type", type],
+    async () => {
+      try {
+        const list = await fetchAnimeByType(type, 24);
+        return { data: list };
+      } catch (err) {
+        console.warn(`Failed to fetch type ${type}:`, err);
+        if (type === "movie") return moviesData;
+        if (type === "ova") return ovaData;
+        if (type === "ona") return onaData;
+        if (type === "special") return specialsData;
+        return popularData;
+      }
+    },
+    queryConfig
   );
+
+  return {
+    data: data || moviesData || { data: [] },
+    isLoading: isLoading && !data,
+    isError,
+  };
+}
+
+export function getRecommendedAnime(_type) {
+  const { data, isLoading, isError } = useQuery(
+    "recommended-anime",
+    async () => {
+      try {
+        const list = await fetchRecommendedAnime(24);
+        return { data: list };
+      } catch (err) {
+        return popularData;
+      }
+    },
+    queryConfig
+  );
+
+  return {
+    data: data || popularData || { data: [] },
+    isLoading: isLoading && !data,
+    isError,
+  };
+}
+
+export function getRandomAnime() {
+  const { data, isLoading, isError } = useQuery(
+    "random-anime",
+    async () => {
+      try {
+        const item = await fetchRandomAnime();
+        return { data: item };
+      } catch (err) {
+        const fallback = popularData.data[0];
+        return { data: fallback };
+      }
+    },
+    { ...queryConfig, staleTime: 0 }
+  );
+
+  return {
+    data: data || { data: popularData.data[0] },
+    isLoading: isLoading && !data,
+    isError,
+  };
+}
+
+export function getAnimeSearch(name, _parameter) {
+  const queryTerm = name || "";
+  const { data, isLoading, isError } = useQuery(
+    ["anime-search", queryTerm],
+    async () => {
+      if (!queryTerm.trim()) {
+        return { data: [] };
+      }
+      try {
+        const list = await fetchAnimeSearch(queryTerm.trim(), 24);
+        return { data: list };
+      } catch (err) {
+        console.warn(`Search error for ${queryTerm}:`, err);
+        // Local search in static popular data
+        const matches = (popularData?.data || []).filter((item) => {
+          const t = (item.title || item.title_english || "").toLowerCase();
+          return t.includes(queryTerm.toLowerCase());
+        });
+        return { data: matches };
+      }
+    },
+    {
+      ...queryConfig,
+      enabled: Boolean(queryTerm.trim().length > 0),
+    }
+  );
+
+  return {
+    data: data || { data: [] },
+    isLoading: isLoading && !data,
+    isError,
+  };
 }

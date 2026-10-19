@@ -1,4 +1,4 @@
-import React, { useRef, useState, lazy } from "react";
+import React, { useRef, useState } from "react";
 import { FaEvernote } from "react-icons/fa";
 import { BiSolidToggleLeft, BiSolidToggleRight } from "react-icons/bi";
 import LoadingSpinner from "../LoadingSpinner";
@@ -22,13 +22,25 @@ export default function ReviewSection() {
   const mangaReviews = getMangaReviews();
   const animeList = animeReviews.data;
   const mangaList = mangaReviews.data;
-  const isLoading = mangaReviews.isLoading && animeReviewIsSelected.isLoading;
+  const isLoading = animeReviews.isLoading || mangaReviews.isLoading;
   const reviewType = animeReviewIsSelected ? animeList : mangaList;
-  const reviewCards = reviewType?.data
-    .filter((el, idx) => idx < 11)
+  const reviewsArray = reviewType?.data || [];
+  const reviewCards = reviewsArray
+    .slice(0, 11)
     .map((el, idx) => {
+      const avatarUrl =
+        el.user?.images?.webp?.image_url ||
+        el.user?.images?.jpg?.image_url ||
+        "https://s4.anilist.co/file/anilistcdn/user/avatar/large/default.png";
+      const userUrl = el.user?.url || `https://myanimelist.net/profile/${el.user?.username || ""}`;
+      const username = el.user?.username || "Anime Fan";
+      const reviewSnippet = el.review
+        ? el.review.slice(0, 140) + "..."
+        : "Great review!";
+      const entryTitle = el.entry?.title || "Anime Title";
+
       return (
-        <SwiperSlide key={el.mal_id}>
+        <SwiperSlide key={el.mal_id || idx}>
           <motion.div
             className="review-card"
             initial={{ opacity: 0 }}
@@ -42,16 +54,16 @@ export default function ReviewSection() {
           >
             <div className="review-card-header">
               <div className="user-profile d-flex a-center ">
-                <LazyImage src={el.user.images.webp.image_url} alt="23" />
-                <a rel="noreferrer" target="_blank" href={el.user.url}>
-                  {el.user.username}
+                <LazyImage src={avatarUrl} alt={username} />
+                <a rel="noreferrer" target="_blank" href={userUrl}>
+                  {username}
                 </a>
               </div>
             </div>
-            <div className="review-text">{el.review.slice(0, 140) + "..."}</div>
+            <div className="review-text">{reviewSnippet}</div>
             <div className="anime-title">
               <FaEvernote size={13} />
-              {el.entry.title}
+              {entryTitle}
             </div>
           </motion.div>
         </SwiperSlide>

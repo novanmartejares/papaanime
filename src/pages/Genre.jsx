@@ -8,7 +8,7 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import { easeOut, motion } from "framer-motion";
 
 export default function Grid() {
-  const [params, setParams] = useSearchParams();
+  const [params] = useSearchParams();
   const anime = getAnimeByGenre(params.get("id"));
 
   return (

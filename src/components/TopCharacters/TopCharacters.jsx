@@ -17,10 +17,19 @@ export default function TopPosts() {
   };
 
   //Elements inherit css from TopTenAnime -- Same list Style
-  const list = data?.data.map((el, idx) => {
+  const characterList = data?.data || [];
+  const list = characterList.map((el, idx) => {
+    const bio = el.about
+      ? el.about.slice(0, 50) + "..."
+      : "No bio available.";
+    const imageUrl =
+      el.images?.webp?.image_url ||
+      el.images?.jpg?.image_url ||
+      "https://s4.anilist.co/file/anilistcdn/character/large/default.jpg";
+
     return (
       <motion.li
-        key={el.mal_id}
+        key={el.mal_id || idx}
         className="d-flex a-center"
         initial={{ opacity: 0 }}
         animate={containerInView && { opacity: 1, x: ["100%", "-3%", "0%"] }}
@@ -35,25 +44,25 @@ export default function TopPosts() {
           <LazyImage
             style={characterDpStyles}
             className="character-dp"
-            src={el.images.webp.image_url}
-            alt="poster"
+            src={imageUrl}
+            alt={el.name || "Character"}
             isInView={containerInView}
           />
           <div className="anime-details d-flex-fd-column">
             <span className="title">
-              <a href={el.url} className="trans-03">
+              <a href={el.url || "#"} target="_blank" rel="noreferrer" className="trans-03">
                 {el.name}
               </a>
             </span>
             <div className="episode-info d-flex ">
               <span className="quality d-flex a-center j-center">
                 <FaThumbsUp />
-                {el.favorites}
+                {el.favorites || 0}
               </span>
             </div>
             <p style={{ fontSize: "13px", color: "var(--grey)" }}>
               <b>BIO: </b>
-              {el.about.slice(0, 50)}...
+              {bio}
             </p>
           </div>
         </div>

@@ -19,6 +19,6 @@ const baseURL = "https://api.jikan.moe/v4/";
 export async function queueRequest(endpoint) {
   return jikanQueue.add(async () => {
     // console.log(endpoint + " *** executed  at: ***" + getCurrentTime());
-    return await axios.get(`${baseURL + endpoint}`).catch((error) => {});
+    return await axios.get(`${baseURL + endpoint}`).catch((_error) => {});
   });
 }

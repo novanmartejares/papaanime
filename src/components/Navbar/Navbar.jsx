@@ -1,22 +1,32 @@
 import React, { useState, useEffect } from "react";
 import "./navbar.css";
-import { Link } from "react-router-dom";
-import { FaSearch, FaBars, FaBell } from "react-icons/fa";
+import { Link, useNavigate } from "react-router-dom";
+import { FaSearch, FaBars } from "react-icons/fa";
 
 import Actions from "./Actions";
 import SocialLinks from "./SocialLinks";
 
 export default function NavBar(props) {
+  const navigate = useNavigate();
   const [searchForm, setSearchForm] = useState({ name: "" });
   const [screenWidth, setScreenWidth] = useState(window.innerWidth);
   const [floatSearchIsVisible, setFloatSearchIsVisible] = useState(false);
   const setSidebarIsOpen = props.setSidebarIsOpen;
   const pageIsScrolled = props.isScrolled;
+
   function handleSearchForm(event) {
     const { name, value } = event.target;
     setSearchForm((prev) => ({ ...prev, [name]: value }));
   }
-  const handleKeyPress = (event) => {};
+
+  const handleKeyPress = (event) => {
+    if (event.key === "Enter" && searchForm?.name?.trim()) {
+      window.scrollTo({ top: 0 });
+      navigate(`/search?name=${encodeURIComponent(searchForm.name.trim())}&parameter=title`);
+      setSearchForm({ name: "" });
+      setFloatSearchIsVisible(false);
+    }
+  };
   useEffect(() => {
     function handleChange() {
       setScreenWidth(window.innerWidth);
